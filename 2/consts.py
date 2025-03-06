@@ -19,6 +19,6 @@ CLIENT_TIMEOUT_IN_SECONDS: Final[int] = int(getenv("CLIENT_TIMEOUT", 60))
 
 TOP_REPOS_NUMBER: Final[int] = int(getenv("TOP_REPOS_NUMBER", 500))
 
-MAX_RETRIES = 5  # Maximum number of retries
-INITIAL_RETRY_DELAY = 1  # Initial delay in seconds
-BACKOFF_FACTOR = 2  # Multiplier for exponential backoff
+MAX_RETRIES = 5
+INITIAL_RETRY_DELAY = 1
+BACKOFF_FACTOR = 2
