@@ -7,7 +7,7 @@ import uvicorn
 from asyncpg import create_pool, Connection, Pool
 from fastapi import APIRouter, FastAPI, Depends, Request
 
-from .logger import logger
+from logger import logger
 
 
 def get_pg_dsn() -> str:
@@ -37,15 +37,17 @@ def get_pg_dsn() -> str:
 async def init_pool(**kwargs) -> Pool:
     try:
         return await create_pool(dsn=get_pg_dsn(), **kwargs)
-    except:
-        pass
+    except Exception as e:
+        logger.error(f"Failed to initialize the connection pool: {e}")
+        raise
 
 
 async def close_pool(pool: Pool) -> None:
     try:
         await pool.close()
-    except:
-        pass
+    except Exception as e:
+        logger.error(f"Failed to close the connection pool: {e}")
+        raise
 
 
 @asynccontextmanager
@@ -58,7 +60,7 @@ async def lifespan(app: FastAPI):
 
     app.state.pg_pool = await create_pool(dsn=get_pg_dsn())
     yield
-    await close_pool(app.state.pg_pool.close()
+    await close_pool(app.state.pg_pool)
 
 
 async def get_pg_connection(request: Request) -> AsyncGenerator[Connection, None]:

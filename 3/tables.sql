@@ -1,3 +1,5 @@
+CREATE DATABASE IF NOT EXISTS test;
+
 CREATE TABLE test.repositories
 (
     name     String,
