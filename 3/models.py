@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime, date
+from datetime import date, datetime
 from typing import NamedTuple
 
 
@@ -64,7 +64,8 @@ class Repository:
                 repo=self.name,
                 author=commit.author,
                 commits_num=commit.commits_num,
-            ) for commit in self.authors_commits_num_today
+            )
+            for commit in self.authors_commits_num_today
         ]
 
     def for_repositories_positions_table(self, date_: date | None = None) -> RepositoriesPositionsItem:

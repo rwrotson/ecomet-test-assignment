@@ -7,11 +7,15 @@ from typing import Any
 
 import aiohttp
 from aiohttp import ClientSession, ClientTimeout, TCPConnector
-
-from consts import GITHUB_API_BASE_URL, MAX_CONCURRENT_REQUESTS, REQUESTS_PER_SECOND, CLIENT_TIMEOUT_IN_SECONDS
+from consts import (
+    CLIENT_TIMEOUT_IN_SECONDS,
+    GITHUB_API_BASE_URL,
+    MAX_CONCURRENT_REQUESTS,
+    REQUESTS_PER_SECOND,
+)
 from logger import scraper_logger
 from models import Repository, RepositoryAuthorCommitsNum
-from utils import retry, TokenBucket
+from utils import TokenBucket, retry
 
 
 class GithubReposScraper:

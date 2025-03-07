@@ -3,10 +3,14 @@ from asyncio import Queue
 from contextlib import asynccontextmanager
 
 from aiochclient import ChClient
-
-from consts import GITHUB_ACCESS_TOKEN, BATCH_SIZE, TOP_REPOS_NUMBER, ASYNCIO_POLL_TIME_IN_SECONDS
-from db import insert_repos, create_clickhouse_client
-from logger import app_logger, worker_logger, processor_logger
+from consts import (
+    ASYNCIO_POLL_TIME_IN_SECONDS,
+    BATCH_SIZE,
+    GITHUB_ACCESS_TOKEN,
+    TOP_REPOS_NUMBER,
+)
+from db import create_clickhouse_client, insert_repos
+from logger import app_logger, processor_logger, worker_logger
 from scraper import GithubReposScraper, create_github_scraper
 
 

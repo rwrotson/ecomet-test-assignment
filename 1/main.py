@@ -4,9 +4,8 @@ from typing import Annotated, AsyncGenerator
 from urllib.parse import quote_plus
 
 import uvicorn
-from asyncpg import create_pool, Connection, Pool
-from fastapi import APIRouter, FastAPI, Depends, Request
-
+from asyncpg import Connection, Pool, create_pool
+from fastapi import APIRouter, Depends, FastAPI, Request
 from logger import logger
 
 

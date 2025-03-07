@@ -1,9 +1,15 @@
 import asyncio
-from aiochclient import ChClient, ChClientError
-from aiohttp import ClientError
 from contextlib import asynccontextmanager
 
-from consts import ClickhouseTable, CLICKHOUSE_URL, CLICKHOUSE_USER, CLICKHOUSE_PASSWORD, CLICKHOUSE_DB
+from aiochclient import ChClient, ChClientError
+from aiohttp import ClientError
+from consts import (
+    CLICKHOUSE_DB,
+    CLICKHOUSE_PASSWORD,
+    CLICKHOUSE_URL,
+    CLICKHOUSE_USER,
+    ClickhouseTable,
+)
 from logger import db_logger
 from models import Repository
 from utils import retry
@@ -70,7 +76,9 @@ async def _insert_to_repositories_authors_commits(clickhouse_client: ChClient, r
     await clickhouse_client.execute(
         f"INSERT INTO {ClickhouseTable.REPOSITORIES_AUTHORS_COMMITS.full_name} VALUES",
         *[
-            tuple(author_commit) for repo in repositories for author_commit in repo.for_repositories_authors_commits_table()
+            tuple(author_commit)
+            for repo in repositories
+            for author_commit in repo.for_repositories_authors_commits_table()
         ],
     )
     db_logger.info(f"Inserted {len(repositories)} repositories authors commits")

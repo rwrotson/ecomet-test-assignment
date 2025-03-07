@@ -1,22 +1,21 @@
 import asyncio
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from json import JSONDecodeError
 from typing import Any
 
 import aiohttp
 from aiohttp import ClientSession, ClientTimeout, TCPConnector
-
 from consts import (
+    CLIENT_TIMEOUT_IN_SECONDS,
     GITHUB_API_BASE_URL,
     MAX_CONCURRENT_REQUESTS,
     REQUESTS_PER_SECOND,
-    CLIENT_TIMEOUT_IN_SECONDS,
     TOP_REPOS_NUMBER,
 )
 from logger import scraper_logger
-from utils import retry, TokenBucket
+from utils import TokenBucket, retry
 
 
 @dataclass(slots=True, frozen=True)

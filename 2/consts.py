@@ -1,7 +1,6 @@
 from os import getenv
 from typing import Final
 
-
 GITHUB_API_BASE_URL: Final[str] = "https://api.github.com"
 
 GITHUB_ACCESS_TOKEN: Final[str] = getenv("GITHUB_ACCESS_TOKEN")

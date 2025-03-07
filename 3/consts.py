@@ -3,7 +3,6 @@ from functools import cached_property
 from os import environ, getenv
 from typing import Final
 
-
 GITHUB_API_BASE_URL: Final[str] = "https://api.github.com"
 
 GITHUB_ACCESS_TOKEN: Final[str] = getenv("GITHUB_ACCESS_TOKEN")
@@ -42,5 +41,6 @@ class ClickhouseTable(StrEnum):
     @cached_property
     def full_name(self) -> str:
         return f"{CLICKHOUSE_DB}.{self.value}"
+
 
 BATCH_SIZE: Final[int] = int(getenv("BATCH_SIZE", 20))

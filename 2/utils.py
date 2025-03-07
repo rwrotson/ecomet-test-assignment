@@ -4,8 +4,12 @@ from functools import wraps
 from typing import Callable
 
 from aiohttp import ClientError
-
-from consts import TOKEN_WAIT_TIME_IN_SECONDS, MAX_RETRIES, INITIAL_RETRY_DELAY, BACKOFF_FACTOR
+from consts import (
+    BACKOFF_FACTOR,
+    INITIAL_RETRY_DELAY,
+    MAX_RETRIES,
+    TOKEN_WAIT_TIME_IN_SECONDS,
+)
 from logger import utils_logger
 
 
@@ -16,6 +20,7 @@ class TokenBucket:
     In a real-world situation, it is better to check for existing solutions,
     with more thorough implementation, e.g. aiolimiter.
     """
+
     def __init__(self, max_tokens: int, refill_rate: float | None = None):
         self._max_tokens: int = max_tokens
         self._current_tokens: int = max_tokens
@@ -46,6 +51,7 @@ def retry[T](
     """
     A decorator to retry an async function with exponential backoff.
     """
+
     # in production code it is better to use library like backoff
     def decorator(func: Callable[..., T]) -> Callable[..., T]:
         @wraps(func)
@@ -61,8 +67,7 @@ def retry[T](
                         utils_logger.error(f"Max retries reached for {func.__name__}: {e}")
                         raise
                     utils_logger.warning(
-                        f"Attempt {attempt + 1} failed for {func.__name__}: {e}. "
-                        f"Retrying in {retry_delay} seconds..."
+                        f"Attempt {attempt + 1} failed for {func.__name__}: {e}. Retrying in {retry_delay} seconds..."
                     )
                     await asyncio.sleep(retry_delay)
                     retry_delay *= backoff_factor
