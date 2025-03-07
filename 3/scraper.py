@@ -1,48 +1,16 @@
 import asyncio
-import time
 import uuid
-from dataclasses import dataclass
 from datetime import datetime, timedelta, UTC
-from functools import wraps
 from json import JSONDecodeError
-from typing import Any, Callable
+from typing import Any
 
 import aiohttp
 from aiohttp import ClientSession, ClientTimeout, TCPConnector
 
-from consts import (
-    GITHUB_API_BASE_URL,
-    MAX_CONCURRENT_REQUESTS,
-    REQUESTS_PER_SECOND,
-    TOKEN_WAIT_TIME_IN_SECONDS,
-    CLIENT_TIMEOUT_IN_SECONDS,
-    TOP_REPOS_NUMBER,
-    MAX_RETRIES,
-    INITIAL_RETRY_DELAY,
-    BACKOFF_FACTOR,
-)
+from consts import GITHUB_API_BASE_URL, MAX_CONCURRENT_REQUESTS, REQUESTS_PER_SECOND, CLIENT_TIMEOUT_IN_SECONDS
 from logger import logger
-
-
-
-
-
-@dataclass(slots=True, frozen=True)
-class RepositoryAuthorCommitsNum:
-    author: str
-    commits_num: int
-
-
-@dataclass(slots=True, frozen=True)
-class Repository:
-    name: str
-    owner: str
-    position: int
-    stars: int
-    watchers: int
-    forks: int
-    language: str
-    authors_commits_num_today: list[RepositoryAuthorCommitsNum]
+from models import Repository, RepositoryAuthorCommitsNum
+from utils import retry, TokenBucket
 
 
 class GithubReposScraper:
@@ -93,7 +61,7 @@ class GithubReposScraper:
                 logger.error(f"Failed to decode JSON for request {uuid_}")
                 raise RuntimeError(f"Failed to decode JSON from Github API. Problems on Github side") from e
 
-    async def _get_top_repositories(self, limit: int = 100) -> list[dict[str, Any]]:
+    async def get_top_repositories(self, limit: int = 100) -> list[dict[str, Any]]:
         """
         GitHub REST API: https://docs.github.com/en/rest/search/search?apiVersion=2022-11-28#search-repositories
         """
@@ -150,7 +118,7 @@ class GithubReposScraper:
 
         return commits
 
-    async def _fetch_repository(self, repo: dict[str, Any], position: int) -> Repository:
+    async def fetch_repository(self, repo: dict[str, Any], position: int) -> Repository:
         """Fetch repository details including commit counts asynchronously."""
         owner = repo["owner"]["login"]
         repo_name = repo["name"]
@@ -159,8 +127,7 @@ class GithubReposScraper:
         authors_commits_num_today = {}
 
         for commit in commits:
-            author = commit.get("commit", {}).get("author", {}).get("name")
-            if author:
+            if author := commit.get("commit", {}).get("author", {}).get("name"):
                 authors_commits_num_today[author] = authors_commits_num_today.get(author, 0) + 1
 
         authors_commits_list = [
@@ -178,12 +145,6 @@ class GithubReposScraper:
             language=repo["language"] or "N/A",
             authors_commits_num_today=authors_commits_list,
         )
-
-    async def get_repositories(self) -> list[Repository]:
-        """Fetch top repositories and their commit data concurrently."""
-        top_repositories = await self._get_top_repositories(limit=TOP_REPOS_NUMBER)
-        tasks = [self._fetch_repository(repo, i) for i, repo in enumerate(top_repositories, start=1)]
-        return await asyncio.gather(*tasks)
 
     async def close(self):
         await self._session.close()

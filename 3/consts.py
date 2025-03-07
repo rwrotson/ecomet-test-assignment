@@ -1,3 +1,4 @@
+from enum import StrEnum
 from os import environ, getenv
 from typing import Final
 
@@ -13,14 +14,14 @@ MAX_CONCURRENT_REQUESTS: Final[int] = int(getenv("MAX_CONCURRENT_REQUESTS", 20))
 # primary limits: https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api?apiVersion=2022-11-28
 REQUESTS_PER_SECOND: Final[int] = int(getenv("REQUESTS_PER_SECOND", 100))
 
-TOKEN_WAIT_TIME_IN_SECONDS: Final[float] = float(getenv("TOKEN_WAIT_TIME_IN_SECONDS", 0.1))
+ASYNCIO_POLL_TIME_IN_SECONDS: Final[float] = float(getenv("ASYNCIO_POLL_TIME_IN_SECONDS", 0.1))
 CLIENT_TIMEOUT_IN_SECONDS: Final[int] = int(getenv("CLIENT_TIMEOUT", 60))
 
 TOP_REPOS_NUMBER: Final[int] = int(getenv("TOP_REPOS_NUMBER", 500))
 
-MAX_RETRIES = 5
-INITIAL_RETRY_DELAY = 1
-BACKOFF_FACTOR = 2
+MAX_RETRIES: Final[int] = int(getenv("MAX_RETRIES", 10))
+INITIAL_RETRY_DELAY: Final[int] = int(getenv("INITIAL_RETRY_DELAY", 3))
+BACKOFF_FACTOR: Final[int] = int(getenv("BACKOFF_FACTOR", 2))
 
 try:
     CLICKHOUSE_URL = environ["CLICKHOUSE_URL"]
@@ -30,5 +31,14 @@ try:
 except KeyError as e:
     error_message = f"Missing Clickhouse environment variable: {e.args[0]}"
     raise RuntimeError(error_message)
+
+
+class ClickhouseTable(StrEnum):
+    REPOSITORIES = getenv("REPOSITORIES_TABLE", "repositories")
+    REPOSITORIES_POSITIONS = getenv("REPOSITORIES_POSITIONS_TABLE", "repositories_positions")
+    REPOSITORIES_AUTHORS_COMMITS = getenv("REPOSITORIES_AUTHORS_COMMITS", "repositories_authors_commits")
+
+    def full_name(self) -> str:
+        return f"{CLICKHOUSE_DB}.{self.value}"
 
 BATCH_SIZE: Final[int] = int(getenv("BATCH_SIZE", 100))
