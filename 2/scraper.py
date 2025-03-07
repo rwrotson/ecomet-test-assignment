@@ -15,7 +15,7 @@ from consts import (
     CLIENT_TIMEOUT_IN_SECONDS,
     TOP_REPOS_NUMBER,
 )
-from logger import logger
+from logger import scraper_logger
 from utils import retry, TokenBucket
 
 
@@ -57,15 +57,16 @@ class GithubReposScraper:
             connector=TCPConnector(limit=max_concurrent_requests, ssl=False),
         )
         self._token_bucket = TokenBucket(max_tokens=requests_per_second)
+        scraper_logger.info(f"Created Github Repos Scraper with access_token")
 
     @retry()
     async def _make_request(self, endpoint: str, method: str = "GET", params: dict[str, Any] | None = None) -> Any:
         uuid_ = uuid.uuid4()
 
-        logger.debug(f"Waiting for sending request {uuid_}")
+        scraper_logger.debug(f"Waiting for sending request {uuid_}")
         await self._token_bucket.wait_for_token()
 
-        logger.debug(f"Getting request {uuid_}")
+        scraper_logger.debug(f"Getting request {uuid_}")
         async with self._session.request(method, f"{GITHUB_API_BASE_URL}/{endpoint}", params=params) as response:
             if response.status in (429, 500, 502, 503, 504):
                 raise aiohttp.ClientResponseError(
@@ -79,10 +80,10 @@ class GithubReposScraper:
 
             try:
                 response_json = await response.json()
-                logger.info(f"Successfully got request {uuid_}")
+                scraper_logger.info(f"Successfully got request {uuid_}")
                 return response_json
             except JSONDecodeError as e:
-                logger.error(f"Failed to decode JSON for request {uuid_}")
+                scraper_logger.error(f"Failed to decode JSON for request {uuid_}")
                 raise RuntimeError(f"Failed to decode JSON from Github API. Problems on Github side") from e
 
     async def _get_top_repositories(self, limit: int = 100) -> list[dict[str, Any]]:
@@ -151,8 +152,7 @@ class GithubReposScraper:
         authors_commits_num_today = {}
 
         for commit in commits:
-            author = commit.get("commit", {}).get("author", {}).get("name")
-            if author:
+            if author := commit.get("commit", {}).get("author", {}).get("name"):
                 authors_commits_num_today[author] = authors_commits_num_today.get(author, 0) + 1
 
         authors_commits_list = [

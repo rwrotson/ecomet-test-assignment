@@ -1,7 +1,7 @@
 import asyncio
 
 from consts import GITHUB_ACCESS_TOKEN
-from logger import logger
+from logger import app_logger
 from scraper import GithubReposScraper
 
 
@@ -14,7 +14,7 @@ async def main():
             print(f"{i:04}. {repo}", flush=True)
 
     except Exception as e:
-        logger.error(f"An error occurred: {e}")
+        app_logger.error(f"An error occurred: {e}")
         raise
 
     finally:

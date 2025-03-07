@@ -10,4 +10,6 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
 )
 
-logger = logging.getLogger("app_logger")
+app_logger = logging.getLogger("app_logger")
+scraper_logger = logging.getLogger("scraper_logger")
+utils_logger = logging.getLogger("utils_logger")
