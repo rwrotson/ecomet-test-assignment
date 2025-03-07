@@ -10,4 +10,10 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
 )
 
-logger = logging.getLogger("app_logger")
+app_logger = logging.getLogger("app_logger")
+db_logger = logging.getLogger("db_logger")
+scraper_logger = logging.getLogger("scraper_logger")
+utils_logger = logging.getLogger("utils_logger")
+
+worker_logger = logging.getLogger("worker_logger")
+processor_logger = logging.getLogger("processor_logger")

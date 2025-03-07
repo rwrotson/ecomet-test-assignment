@@ -4,96 +4,72 @@ from contextlib import asynccontextmanager
 
 from aiochclient import ChClient
 
-from consts import GITHUB_ACCESS_TOKEN, CLICKHOUSE_URL, CLICKHOUSE_PASSWORD, CLICKHOUSE_USER, CLICKHOUSE_DB, BATCH_SIZE, TOP_REPOS_NUMBER, ASYNCIO_POLL_TIME_IN_SECONDS
-from db import insert_repos
-from logger import logger
-from scraper import GithubReposScraper
+from consts import GITHUB_ACCESS_TOKEN, BATCH_SIZE, TOP_REPOS_NUMBER, ASYNCIO_POLL_TIME_IN_SECONDS
+from db import insert_repos, create_clickhouse_client
+from logger import app_logger, worker_logger, processor_logger
+from scraper import GithubReposScraper, create_github_scraper
 
 
 async def scraper_worker(queue: Queue, scraper: GithubReposScraper) -> None:
+    worker_logger.info("Starting scraper worker")
     top_repositories = await scraper.get_top_repositories(limit=TOP_REPOS_NUMBER)
 
-    tasks = []
     for i, repo in enumerate(top_repositories, start=1):
-        task = asyncio.create_task(scraper.fetch_repository(repo, i))
-        tasks.append(task)
-
-    for task in asyncio.as_completed(tasks):
-        fetched_repo = await task
+        fetched_repo = await scraper.fetch_repository(repo, i)
         await queue.put(fetched_repo)
+        worker_logger.debug(f"Added repository {fetched_repo} to queue")
 
-    await queue.put(None)  # Sentinel value to signal that scraper is finished its work
+    await queue.put(None)
+    worker_logger.info("Finished scraper worker")
 
 
 async def batch_processor(queue: Queue, clickhouse_client: ChClient) -> None:
+    """Processor handling repositories from queue and saving it into ClickHouse in batches."""
+    processor_logger.info("Starting batch processor")
     while True:
-        if (queue.qsize() >= BATCH_SIZE) or (queue.qsize() > 0 and (queue.qsize() < BATCH_SIZE) and queue.empty()):
+        if queue.qsize() >= BATCH_SIZE or (queue.qsize() > 0 and queue.empty()):
+            processor_logger.info("Batch processor activated")
             batch_size = min(queue.qsize(), BATCH_SIZE)
             batch = []
+            processor_logger.debug(f"Preparing batch size: {batch_size}")
             for _ in range(batch_size):
                 result = await queue.get()
                 if result is None:  # If sentinel value, process the remaining items and exit
                     if batch:
                         await insert_repos(clickhouse_client=clickhouse_client, repositories=batch)
+                    processor_logger.info("Batch processor exiting (sentinel value received)")
                     return
                 batch.append(result)
+                processor_logger.debug(f"Added batch result: {result}")
 
             await insert_repos(clickhouse_client=clickhouse_client, repositories=batch)
 
             for _ in range(batch_size):
                 queue.task_done()
+            processor_logger.debug(f"Finished processing batch")
 
         elif queue.empty():
-            break  # Exit if the queue is empty and no more items are expected
+            processor_logger.debug("Queue is empty, waiting for items...")
+            await asyncio.sleep(ASYNCIO_POLL_TIME_IN_SECONDS)
 
         else:
             await asyncio.sleep(ASYNCIO_POLL_TIME_IN_SECONDS)
+            processor_logger.debug("Batch processor sleeping")
 
 
 @asynccontextmanager
 async def create_queue():
-    logger.info("Creating queue")
+    app_logger.info("Creating queue")
     queue = Queue()
-    logger.info("Queue created")
+    app_logger.info("Queue created")
     try:
         yield queue
     finally:
-        logger.info("Draining the queue before exiting...")
+        app_logger.info("Draining the queue before exiting...")
         while not queue.empty():
             await queue.get()
             queue.task_done()
-        logger.info(f"Queue is empty, exiting...")
-
-
-@asynccontextmanager
-async def create_github_scraper(access_token: str):
-    logger.info("Initializing GitHub scraper...")
-    scraper = GithubReposScraper(access_token=access_token)
-    logger.info("GitHub scraper initialized.")
-    try:
-        yield scraper
-    finally:
-        logger.info("Finishing GitHub scraper...")
-        await scraper.close()
-        logger.info("GitHub scraper finished.")
-
-
-@asynccontextmanager
-async def create_clickhouse_client():
-    logger.info("Initializing ClickHouse client...")
-    db_client = ChClient(
-        url=CLICKHOUSE_URL,
-        user=CLICKHOUSE_USER,
-        password=CLICKHOUSE_PASSWORD,
-        database=CLICKHOUSE_DB,
-    )
-    logger.info("ClickHouse client initialized.")
-    try:
-        yield db_client
-    finally:
-        logger.info("Finishing ClickHouse client...")
-        await db_client.close()
-        logger.info("ClickHouse client finished.")
+        app_logger.info(f"Queue is empty, exiting...")
 
 
 async def main():
@@ -109,7 +85,7 @@ async def main():
             await asyncio.gather(scraper_task, processor_task)
 
     except Exception as e:
-        logger.error(f"An error occurred: {e}")
+        app_logger.error(f"An error occurred: {e}")
         raise
 
 

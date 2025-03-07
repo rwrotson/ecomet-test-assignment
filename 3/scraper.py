@@ -1,6 +1,7 @@
 import asyncio
 import uuid
-from datetime import datetime, timedelta, UTC
+from contextlib import asynccontextmanager
+from datetime import datetime, timedelta
 from json import JSONDecodeError
 from typing import Any
 
@@ -8,7 +9,7 @@ import aiohttp
 from aiohttp import ClientSession, ClientTimeout, TCPConnector
 
 from consts import GITHUB_API_BASE_URL, MAX_CONCURRENT_REQUESTS, REQUESTS_PER_SECOND, CLIENT_TIMEOUT_IN_SECONDS
-from logger import logger
+from logger import scraper_logger
 from models import Repository, RepositoryAuthorCommitsNum
 from utils import retry, TokenBucket
 
@@ -38,10 +39,10 @@ class GithubReposScraper:
     async def _make_request(self, endpoint: str, method: str = "GET", params: dict[str, Any] | None = None) -> Any:
         uuid_ = uuid.uuid4()
 
-        logger.debug(f"Waiting for sending request {uuid_}")
+        scraper_logger.debug(f"Waiting for sending request {uuid_}")
         await self._token_bucket.wait_for_token()
 
-        logger.debug(f"Getting request {uuid_}")
+        scraper_logger.debug(f"Getting request {uuid_}")
         async with self._session.request(method, f"{GITHUB_API_BASE_URL}/{endpoint}", params=params) as response:
             if response.status in (429, 500, 502, 503, 504):
                 raise aiohttp.ClientResponseError(
@@ -55,10 +56,10 @@ class GithubReposScraper:
 
             try:
                 response_json = await response.json()
-                logger.info(f"Successfully got request {uuid_}")
+                scraper_logger.info(f"Successfully got request {uuid_}")
                 return response_json
             except JSONDecodeError as e:
-                logger.error(f"Failed to decode JSON for request {uuid_}")
+                scraper_logger.error(f"Failed to decode JSON for request {uuid_}")
                 raise RuntimeError(f"Failed to decode JSON from Github API. Problems on Github side") from e
 
     async def get_top_repositories(self, limit: int = 100) -> list[dict[str, Any]]:
@@ -69,6 +70,7 @@ class GithubReposScraper:
         # https://docs.github.com/en/rest/search/search?apiVersion=2022-11-28
         # for simplicity let's suppose that we never need repos on position more than 1000,
         # to not be blocked by this limit
+        scraper_logger.info(f"Getting top repositories for {limit} repositories")
         if limit > 1000:
             raise ValueError("limit of _get_top_repositories must be less than 1000")
 
@@ -90,11 +92,13 @@ class GithubReposScraper:
         ]
         results = await asyncio.gather(*tasks)
 
+        scraper_logger.info(f"Got {total_pages} top repositories")
+
         return [item for data in results for item in data["items"]][:limit]
 
     async def _get_repository_commits(self, owner: str, repo: str) -> list[dict[str, Any]]:
         """GitHub REST API: https://docs.github.com/en/rest/commits/commits?apiVersion=2022-11-28#list-commits"""
-        since_time = (datetime.now(UTC) - timedelta(days=1)).isoformat()
+        since_time = (datetime.now() - timedelta(days=1)).isoformat()
 
         first_page = await self._make_request(
             endpoint=f"repos/{owner}/{repo}/commits",
@@ -120,8 +124,8 @@ class GithubReposScraper:
 
     async def fetch_repository(self, repo: dict[str, Any], position: int) -> Repository:
         """Fetch repository details including commit counts asynchronously."""
-        owner = repo["owner"]["login"]
-        repo_name = repo["name"]
+        repo_name, owner = repo["name"], repo["owner"]["login"]
+        scraper_logger.info(f"Fetching repository {repo_name}")
 
         commits = await self._get_repository_commits(owner=owner, repo=repo_name)
         authors_commits_num_today = {}
@@ -135,7 +139,7 @@ class GithubReposScraper:
             for author, commits_num in authors_commits_num_today.items()
         ]
 
-        return Repository(
+        repository = Repository(
             name=repo_name,
             owner=owner,
             position=position,
@@ -145,6 +149,21 @@ class GithubReposScraper:
             language=repo["language"] or "N/A",
             authors_commits_num_today=authors_commits_list,
         )
+        scraper_logger.info(f"Fetched repository {repository}")
+        return repository
 
     async def close(self):
         await self._session.close()
+
+
+@asynccontextmanager
+async def create_github_scraper(access_token: str):
+    scraper_logger.info("Initializing GitHub scraper...")
+    scraper = GithubReposScraper(access_token=access_token)
+    scraper_logger.info("GitHub scraper initialized.")
+    try:
+        yield scraper
+    finally:
+        scraper_logger.info("Finishing GitHub scraper...")
+        await scraper.close()
+        scraper_logger.info("GitHub scraper finished.")

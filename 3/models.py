@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime, date, UTC
+from datetime import datetime, date
 from typing import NamedTuple
 
 
@@ -43,6 +43,9 @@ class Repository:
     language: str
     authors_commits_num_today: list[RepositoryAuthorCommitsNum]
 
+    def __str__(self):
+        return f"Repository {self.position} <{self.name}>"
+
     def for_repositories_table(self, updated: datetime | None = None) -> RepositoriesDataItem:
         return RepositoriesDataItem(
             name=self.name,
@@ -51,13 +54,13 @@ class Repository:
             watchers=self.watchers,
             forks=self.forks,
             language=self.language,
-            updated=updated or datetime.now(UTC),
+            updated=updated or datetime.now().replace(microsecond=0),
         )
 
     def for_repositories_authors_commits_table(self, date_: date | None = None) -> list[RepositoriesAuthorsCommitsItem]:
         return [
             RepositoriesAuthorsCommitsItem(
-                date=date_ or datetime.now(UTC).date(),
+                date=date_ or datetime.now().date(),
                 repo=self.name,
                 author=commit.author,
                 commits_num=commit.commits_num,
@@ -66,7 +69,7 @@ class Repository:
 
     def for_repositories_positions_table(self, date_: date | None = None) -> RepositoriesPositionsItem:
         return RepositoriesPositionsItem(
-            date=date_,
+            date=date_ or datetime.now().date(),
             repo=self.name,
             position=self.position,
         )

@@ -6,7 +6,7 @@ from typing import Callable
 from aiohttp import ClientError
 
 from consts import ASYNCIO_POLL_TIME_IN_SECONDS, MAX_RETRIES, INITIAL_RETRY_DELAY, BACKOFF_FACTOR
-from logger import logger
+from logger import utils_logger
 
 
 class TokenBucket:
@@ -58,9 +58,9 @@ def retry[T](
 
                 except retryable_exceptions as e:
                     if attempt == max_retries - 1:
-                        logger.error(f"Max retries reached for {func.__name__}: {e}")
+                        utils_logger.error(f"Max retries reached for {func.__name__}: {e}")
                         raise
-                    logger.warning(
+                    utils_logger.warning(
                         f"Attempt {attempt + 1} failed for {func.__name__}: {e}. "
                         f"Retrying in {retry_delay} seconds..."
                     )

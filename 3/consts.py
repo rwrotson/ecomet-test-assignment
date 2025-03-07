@@ -1,4 +1,5 @@
 from enum import StrEnum
+from functools import cached_property
 from os import environ, getenv
 from typing import Final
 
@@ -38,7 +39,8 @@ class ClickhouseTable(StrEnum):
     REPOSITORIES_POSITIONS = getenv("REPOSITORIES_POSITIONS_TABLE", "repositories_positions")
     REPOSITORIES_AUTHORS_COMMITS = getenv("REPOSITORIES_AUTHORS_COMMITS", "repositories_authors_commits")
 
+    @cached_property
     def full_name(self) -> str:
         return f"{CLICKHOUSE_DB}.{self.value}"
 
-BATCH_SIZE: Final[int] = int(getenv("BATCH_SIZE", 100))
+BATCH_SIZE: Final[int] = int(getenv("BATCH_SIZE", 20))
