@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 
 from aiochclient import ChClient, ChClientError
 from aiohttp import ClientError
+
 from consts import (
     CLICKHOUSE_DB,
     CLICKHOUSE_PASSWORD,
@@ -40,9 +41,6 @@ RETRYABLE_EXCEPTIONS = (ClientError, ChClientError, asyncio.TimeoutError)
 async def _insert_to_repositories(clickhouse_client: ChClient, repositories: list[Repository]) -> None:
     """Insert repositories data into repositories table."""
     db_logger.info(f"Inserting {len(repositories)} repositories")
-    values = [tuple(repo.for_repositories_table()) for repo in repositories]
-    db_logger.info(f"INSERTING R {values} values")
-
     await clickhouse_client.execute(
         f"INSERT INTO {ClickhouseTable.REPOSITORIES.full_name} VALUES",
         *[tuple(repo.for_repositories_table()) for repo in repositories],
@@ -54,9 +52,6 @@ async def _insert_to_repositories(clickhouse_client: ChClient, repositories: lis
 async def _insert_to_repositories_positions(clickhouse_client: ChClient, repositories: list[Repository]) -> None:
     """Insert repositories data into repositories_positions table."""
     db_logger.info(f"Inserted {len(repositories)} repositories positions")
-    values = [tuple(repo.for_repositories_positions_table()) for repo in repositories]
-    db_logger.info(f"INSERTING RP {values} values")
-
     await clickhouse_client.execute(
         f"INSERT INTO {ClickhouseTable.REPOSITORIES_POSITIONS.full_name} VALUES",
         *[tuple(repo.for_repositories_positions_table()) for repo in repositories],
@@ -68,11 +63,6 @@ async def _insert_to_repositories_positions(clickhouse_client: ChClient, reposit
 async def _insert_to_repositories_authors_commits(clickhouse_client: ChClient, repositories: list[Repository]) -> None:
     """Insert repositories data into repositories_authors_commits table"""
     db_logger.info(f"Inserting {len(repositories)} repositories authors commits...")
-    values = [
-        tuple(author_commit) for repo in repositories for author_commit in repo.for_repositories_authors_commits_table()
-    ]
-    db_logger.info(f"INSERTING RAC {values} values")
-
     await clickhouse_client.execute(
         f"INSERT INTO {ClickhouseTable.REPOSITORIES_AUTHORS_COMMITS.full_name} VALUES",
         *[

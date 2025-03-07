@@ -7,6 +7,7 @@ from typing import Any
 
 import aiohttp
 from aiohttp import ClientSession, ClientTimeout, TCPConnector
+
 from consts import (
     CLIENT_TIMEOUT_IN_SECONDS,
     GITHUB_API_BASE_URL,

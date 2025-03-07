@@ -14,7 +14,8 @@ MAX_CONCURRENT_REQUESTS: Final[int] = int(getenv("MAX_CONCURRENT_REQUESTS", 20))
 # primary limits: https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api?apiVersion=2022-11-28
 REQUESTS_PER_SECOND: Final[int] = int(getenv("REQUESTS_PER_SECOND", 100))
 
-ASYNCIO_POLL_TIME_IN_SECONDS: Final[float] = float(getenv("ASYNCIO_POLL_TIME_IN_SECONDS", 0.1))
+TOKEN_WAIT_TIME_IN_SECONDS: Final[float] = float(getenv("TOKEN_WAIT_TIME_IN_SECONDS", 0.1))
+PRODUCER_POLL_INTERVAL_IN_SECONDS: Final[float] = float(getenv("PRODUCER_POLL_INTERVAL_IN_SECONDS", 2))
 CLIENT_TIMEOUT_IN_SECONDS: Final[int] = int(getenv("CLIENT_TIMEOUT", 60))
 
 TOP_REPOS_NUMBER: Final[int] = int(getenv("TOP_REPOS_NUMBER", 500))
@@ -43,4 +44,4 @@ class ClickhouseTable(StrEnum):
         return f"{CLICKHOUSE_DB}.{self.value}"
 
 
-BATCH_SIZE: Final[int] = int(getenv("BATCH_SIZE", 20))
+BATCH_SIZE: Final[int] = int(getenv("BATCH_SIZE", 100))

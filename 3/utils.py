@@ -4,11 +4,12 @@ from functools import wraps
 from typing import Callable
 
 from aiohttp import ClientError
+
 from consts import (
-    ASYNCIO_POLL_TIME_IN_SECONDS,
     BACKOFF_FACTOR,
     INITIAL_RETRY_DELAY,
     MAX_RETRIES,
+    TOKEN_WAIT_TIME_IN_SECONDS,
 )
 from logger import utils_logger
 
@@ -30,7 +31,7 @@ class TokenBucket:
     async def wait_for_token(self):
         while self._current_tokens < 1:
             self._add_new_tokens()
-            await asyncio.sleep(ASYNCIO_POLL_TIME_IN_SECONDS)
+            await asyncio.sleep(TOKEN_WAIT_TIME_IN_SECONDS)
         self._current_tokens -= 1
 
     def _add_new_tokens(self):
